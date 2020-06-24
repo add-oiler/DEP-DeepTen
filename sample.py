@@ -43,6 +43,6 @@ if __name__ == '__main__':
                     else:
                         rto = fratio[2]
                     copy_file(cdt + "_Images/Images_" + ppi + "ppi/" + ppi + "ppi_test/" + cls, cdt + "_hybrid/" + tp +
-                              "/" + cls + "/", rto)  # 分割训练集
+                              "/" + cls + "/", rto)  # 分割数据集
     # copy_file("Original_Images/Images_36ppi/36ppi_test/c6000", "Original_hybrid/test/c6000/", 0)
     print('Seg over')
