@@ -27,28 +27,22 @@ def copy_file(pfrom, pto, rt):
 
 
 if __name__ == '__main__':
-    copy_file("Original_Images/Images_36ppi/36ppi_test/c1", "Original_hybrid/test/c1/", 0)  # 分割训练集
-    copy_file("Original_Images/Images_36ppi/36ppi_test/c6000", "Original_hybrid/test/c6000/", 0)
-    copy_file("Original_Images/Images_54ppi/54ppi_test/c1", "Original_hybrid/test/c1/", 1/3)
-    copy_file("Original_Images/Images_54ppi/54ppi_test/c6000", "Original_hybrid/test/c6000/", 1/3)
-    copy_file("Original_Images/Images_72ppi/72ppi_test/c1", "Original_hybrid/test/c1/", 2/3)
-    copy_file("Original_Images/Images_72ppi/72ppi_test/c6000", "Original_hybrid/test/c6000/", 2/3)
-    copy_file("Aligned_Images/Images_36ppi/36ppi_test/c1", "Aligned_hybrid/test/c1/", 0)
-    copy_file("Aligned_Images/Images_36ppi/36ppi_test/c6000", "Aligned_hybrid/test/c6000/", 0)
-    copy_file("Aligned_Images/Images_54ppi/54ppi_test/c1", "Aligned_hybrid/test/c1/", 1/3)
-    copy_file("Aligned_Images/Images_54ppi/54ppi_test/c6000", "Aligned_hybrid/test/c6000/", 1/3)
-    copy_file("Aligned_Images/Images_72ppi/72ppi_test/c1", "Aligned_hybrid/test/c1/", 2/3)
-    copy_file("Aligned_Images/Images_72ppi/72ppi_test/c6000", "Aligned_hybrid/test/c6000/", 2/3)
-    copy_file("Original_Images/Images_36ppi/36ppi_train/c1", "Original_hybrid/train/c1/", 0)  # 分割训练集
-    copy_file("Original_Images/Images_36ppi/36ppi_train/c6000", "Original_hybrid/train/c6000/", 0)
-    copy_file("Original_Images/Images_54ppi/54ppi_train/c1", "Original_hybrid/train/c1/", 1/3)
-    copy_file("Original_Images/Images_54ppi/54ppi_train/c6000", "Original_hybrid/train/c6000/", 1/3)
-    copy_file("Original_Images/Images_72ppi/72ppi_train/c1", "Original_hybrid/train/c1/", 2/3)
-    copy_file("Original_Images/Images_72ppi/72ppi_train/c6000", "Original_hybrid/train/c6000/", 2/3)
-    copy_file("Aligned_Images/Images_36ppi/36ppi_train/c1", "Aligned_hybrid/train/c1/", 0)
-    copy_file("Aligned_Images/Images_36ppi/36ppi_train/c6000", "Aligned_hybrid/train/c6000/", 0)
-    copy_file("Aligned_Images/Images_54ppi/54ppi_train/c1", "Aligned_hybrid/train/c1/", 1/3)
-    copy_file("Aligned_Images/Images_54ppi/54ppi_train/c6000", "Aligned_hybrid/train/c6000/", 1/3)
-    copy_file("Aligned_Images/Images_72ppi/72ppi_train/c1", "Aligned_hybrid/train/c1/", 2/3)
-    copy_file("Aligned_Images/Images_72ppi/72ppi_train/c6000", "Aligned_hybrid/train/c6000/", 2/3)
+    fcondition = ["Original", "Aligned"]
+    fppi = ["36", "54", "72"]
+    ftype = ["train", "test"]
+    fclass = ["c1", "c6000"]
+    fratio = [0, 1/3, 2/3]
+    for cdt in fcondition:
+        for ppi in fppi:
+            for tp in ftype:
+                for cls in fclass:
+                    if ppi == "36":
+                        rto = fratio[0]
+                    if ppi == "54":
+                        rto = fratio[1]
+                    else:
+                        rto = fratio[2]
+                    copy_file(cdt + "_Images/Images_" + ppi + "ppi/" + ppi + "ppi_test/" + cls, cdt + "_hybrid/" + tp +
+                              "/" + cls + "/", rto)  # 分割训练集
+    # copy_file("Original_Images/Images_36ppi/36ppi_test/c6000", "Original_hybrid/test/c6000/", 0)
     print('Seg over')
