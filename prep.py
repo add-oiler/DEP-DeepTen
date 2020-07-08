@@ -3,11 +3,8 @@ import shutil
 
 
 def move_file(path, p1, p2):
-    # path_xml = "36ppi/c1"
-    # filelist = os.listdir(path_xml)
-    # path1 = "36ppi_train/c1"
-    # path2 = "36ppi_test/c1"
-
+    os.mkdir(p1)
+    os.mkdir(p2)
     path_xml = path
     filelist = os.listdir(path_xml)
     path1 = p1
@@ -36,6 +33,10 @@ def move_file(path, p1, p2):
 
 
 if __name__ == '__main__':
-    move_file("36ppi/c1", "36ppi_train/c1/", "36ppi_test/c1/")  # 分割训练集
-    move_file("36ppi/c6000", "36ppi_train/c6000/", "36ppi_test/c6000/")
+    dir_name = input("Folder: ")
+    os.mkdir(dir_name + "_train")
+    os.mkdir(dir_name + "_test")
+    move_file(dir_name + "/c1", dir_name + "_train/c1/", dir_name + "_test/c1/")  # 分割训练集
+    move_file(dir_name + "/c6000", dir_name + "_train/c6000/", dir_name + "_test/c6000/")
     print('Seg over')
+    
