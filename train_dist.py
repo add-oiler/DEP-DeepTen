@@ -1,11 +1,3 @@
-##+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## Created by: Hang Zhang
-## Email: zhanghang0704@gmail.com
-## Copyright (c) 2020
-##
-## LICENSE file in the root directory of this source tree 
-##+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
 import os
 import time
 import argparse
@@ -22,6 +14,8 @@ import encoding
 from encoding.nn import LabelSmoothing, NLLMultiLabelSmooth
 from encoding.utils import (accuracy, AverageMeter, MixUpWrapper, LR_Scheduler, torch_dist_sum)
 
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+
 
 class Options():
     def __init__(self):
@@ -37,16 +31,16 @@ class Options():
                             help='label-smoothing (default eta: 0.0)')
         parser.add_argument('--mixup', type=float, default=0.0,
                             help='mixup (default eta: 0.0)')
-        parser.add_argument('--rand-aug', action='store_true',
+        parser.add_argument('--rand-aug', action='store_true', 
                             default=False, help='random augment')
         # model params 
         parser.add_argument('--model', type=str, default='densenet',
                             help='network model type (default: densenet)')
-        parser.add_argument('--rectify', action='store_true',
+        parser.add_argument('--rectify', action='store_true', 
                             default=False, help='rectify convolution')
-        parser.add_argument('--rectify-avg', action='store_true',
+        parser.add_argument('--rectify-avg', action='store_true', 
                             default=False, help='rectify convolution')
-        parser.add_argument('--pretrained', action='store_true',
+        parser.add_argument('--pretrained', action='store_true', 
                             default=False, help='load pretrianed mode')
         parser.add_argument('--last-gamma', action='store_true', default=False,
                             help='whether to init gamma of the last BN layer in \
@@ -62,22 +56,22 @@ class Options():
                             help='batch size for testing (default: 256)')
         parser.add_argument('--epochs', type=int, default=120, metavar='N',
                             help='number of epochs to train (default: 600)')
-        parser.add_argument('--start_epoch', type=int, default=0,
+        parser.add_argument('--start_epoch', type=int, default=0, 
                             metavar='N', help='the epoch number to start (default: 1)')
         parser.add_argument('--workers', type=int, default=8,
                             metavar='N', help='dataloader threads')
         # optimizer
         parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
                             help='learning rate (default: 0.1)')
-        parser.add_argument('--lr-scheduler', type=str, default='cos',
+        parser.add_argument('--lr-scheduler', type=str, default='cos', 
                             help='learning rate scheduler (default: cos)')
         parser.add_argument('--warmup-epochs', type=int, default=0,
                             help='number of warmup epochs (default: 0)')
-        parser.add_argument('--momentum', type=float, default=0.9,
+        parser.add_argument('--momentum', type=float, default=0.9, 
                             metavar='M', help='SGD momentum (default: 0.9)')
-        parser.add_argument('--weight-decay', type=float, default=1e-4,
-                            metavar='M', help='SGD weight decay (default: 1e-4)')
-        parser.add_argument('--no-bn-wd', action='store_true',
+        parser.add_argument('--weight-decay', type=float, default=1e-4, 
+                            metavar ='M', help='SGD weight decay (default: 1e-4)')
+        parser.add_argument('--no-bn-wd', action='store_true', 
                             default=False, help='no bias decay')
         # seed
         parser.add_argument('--seed', type=int, default=1, metavar='S',
@@ -97,7 +91,7 @@ class Options():
         parser.add_argument('--dist-backend', default='nccl', type=str,
                             help='distributed backend')
         # evaluation option
-        parser.add_argument('--eval', action='store_true', default=False,
+        parser.add_argument('--eval', action='store_true', default= False,
                             help='evaluating')
         parser.add_argument('--export', type=str, default=None,
                             help='put the path to resuming file if needed')
@@ -107,24 +101,24 @@ class Options():
         args = self.parser.parse_args()
         return args
 
-
 def main():
     args = Options().parse()
-    ngpus_per_node = torch.cuda.device_count()
+    # ngpus_per_node = torch.cuda.device_count()  # why the .... does NPN output 8 always?
+    ngpus_per_node = 1  # It works, but why?
+    print(ngpus_per_node)
     args.world_size = ngpus_per_node * args.world_size
     args.lr = args.lr * args.world_size
     mp.spawn(main_worker, nprocs=ngpus_per_node, args=(ngpus_per_node, args))
-
 
 # global variable
 best_pred = 0.0
 acclist_train = []
 acclist_val = []
-file_name = 'ppi36_align_loss_l0012_e200_b64.txt'
-
+file_name = 'test.txt'
 
 def main_worker(gpu, ngpus_per_node, args):
     args.gpu = gpu
+    print(gpu)
     args.rank = args.rank * ngpus_per_node + gpu
     print('rank: {} / {}'.format(args.rank, args.world_size))
     dist.init_process_group(backend=args.dist_backend,
@@ -141,13 +135,11 @@ def main_worker(gpu, ngpus_per_node, args):
     torch.cuda.manual_seed(args.seed)
     # init dataloader
     transform_train, transform_val = encoding.transforms.get_transform(
-        args.dataset, args.base_size, args.crop_size, args.rand_aug)
+            args.dataset, args.base_size, args.crop_size, args.rand_aug)
     trainset = encoding.datasets.get_dataset(args.dataset, root=os.path.expanduser('~/.encoding/data'),
                                              transform=transform_train, train=True, download=True)
     valset = encoding.datasets.get_dataset(args.dataset, root=os.path.expanduser('~/.encoding/data'),
                                            transform=transform_val, train=False, download=True)
-
-    print('################')
 
     train_sampler = torch.utils.data.distributed.DistributedSampler(trainset)
     train_loader = torch.utils.data.DataLoader(
@@ -160,7 +152,7 @@ def main_worker(gpu, ngpus_per_node, args):
         valset, batch_size=args.test_batch_size, shuffle=False,
         num_workers=args.workers, pin_memory=True,
         sampler=val_sampler)
-
+    
     # init the model
     model_kwargs = {}
     if args.pretrained:
@@ -178,14 +170,14 @@ def main_worker(gpu, ngpus_per_node, args):
     if args.rectify:
         model_kwargs['rectified_conv'] = True
         model_kwargs['rectify_avg'] = args.rectify_avg
-
+    
     model = encoding.models.get_model(args.model, **model_kwargs)
 
     if args.dropblock_prob > 0.0:
         from functools import partial
         from encoding.nn import reset_dropblock
         nr_iters = (args.epochs - args.warmup_epochs) * len(train_loader)
-        apply_drop_prob = partial(reset_dropblock, args.warmup_epochs * len(train_loader),
+        apply_drop_prob = partial(reset_dropblock, args.warmup_epochs*len(train_loader),
                                   nr_iters, 0.0, args.dropblock_prob)
         model.apply(apply_drop_prob)
 
@@ -202,8 +194,7 @@ def main_worker(gpu, ngpus_per_node, args):
 
     model.cuda(args.gpu)
     criterion.cuda(args.gpu)
-    # model = DistributedDataParallel(model, device_ids=[args.gpu])
-    model = torch.nn.DataParallel(model, device_ids=[args.gpu])
+    model = DistributedDataParallel(model, device_ids=[args.gpu], find_unused_parameters=True)
 
     # criterion and optimizer
     if args.no_bn_wd:
@@ -216,7 +207,7 @@ def main_worker(gpu, ngpus_per_node, args):
         if args.gpu == 0:
             print(" Weight decay NOT applied to BN parameters ")
             print(f'len(parameters): {len(list(model.parameters()))} = {len(bn_params)} + {len(rest_params)}')
-        optimizer = torch.optim.SGD([{'params': bn_params, 'weight_decay': 0},
+        optimizer = torch.optim.SGD([{'params': bn_params, 'weight_decay': 0 },
                                      {'params': rest_params, 'weight_decay': args.weight_decay}],
                                     lr=args.lr,
                                     momentum=args.momentum,
@@ -240,23 +231,21 @@ def main_worker(gpu, ngpus_per_node, args):
             optimizer.load_state_dict(checkpoint['optimizer'])
             if args.gpu == 0:
                 print("=> loaded checkpoint '{}' (epoch {})"
-                      .format(args.resume, checkpoint['epoch']))
+                .format(args.resume, checkpoint['epoch']))
         else:
-            raise RuntimeError("=> no resume checkpoint found at '{}'". \
-                               format(args.resume))
+            raise RuntimeError ("=> no resume checkpoint found at '{}'".\
+                format(args.resume))
     scheduler = LR_Scheduler(args.lr_scheduler,
                              base_lr=args.lr,
                              num_epochs=args.epochs,
                              iters_per_epoch=len(train_loader),
                              warmup_epochs=args.warmup_epochs)
-
     def train(epoch):
-        # print(acclist_val)
         train_sampler.set_epoch(epoch)
         model.train()
         losses = AverageMeter()
         top1 = AverageMeter()
-        global best_pred, acclist_train, file_name
+        global best_pred, acclist_train
         for batch_idx, (data, target) in enumerate(train_loader):
             scheduler(optimizer, batch_idx, epoch, best_pred)
             if not args.mixup:
@@ -274,22 +263,21 @@ def main_worker(gpu, ngpus_per_node, args):
             losses.update(loss.item(), data.size(0))
             if batch_idx % 100 == 0 and args.gpu == 0:
                 if args.mixup:
-                    print('Batch: %d| Loss: %.3f' % (batch_idx, losses.avg))
+                    print('Batch: %d| Loss: %.3f'%(batch_idx, losses.avg))
                 else:
-                    print('Batch: %d| Loss: %.3f | Top1: %.3f' % (batch_idx, losses.avg, top1.avg))
+                    print('Batch: %d| Loss: %.3f | Top1: %.3f'%(batch_idx, losses.avg, top1.avg))
 
-        # file_name = 'ppi72_loss__l0025_e120_b64.txt'
         file_handle = open(file_name, mode='a+')
         file_handle.write(str(float(losses.avg)) + ' ')
-        # file_handle.write('\n')
         file_handle.close()
+        
         acclist_train += [top1.avg]
 
     def validate(epoch):
         model.eval()
         top1 = AverageMeter()
         top5 = AverageMeter()
-        global best_pred, acclist_train, acclist_val, file_name
+        global best_pred, acclist_train, acclist_val
         is_best = False
         for batch_idx, (data, target) in enumerate(val_loader):
             data, target = data.cuda(args.gpu), target.cuda(args.gpu)
@@ -301,9 +289,7 @@ def main_worker(gpu, ngpus_per_node, args):
 
         # sum all
         sum1, cnt1, sum5, cnt5 = torch_dist_sum(args.gpu, top1.sum, top1.count, top5.sum, top5.count)
-
-        # print('ACC: %.3f%%' % (sum(sum1) / sum(cnt1)))
-        # file_name = 'ppi72_loss__l0025_e120_b64.txt'
+        
         file_handle = open(file_name, mode='a+')
         file_handle.write(str(float(sum(sum1)) / float(sum(cnt1))))
         file_handle.write('\n')
@@ -313,28 +299,27 @@ def main_worker(gpu, ngpus_per_node, args):
             if args.gpu == 0:
                 top1_acc = sum(sum1) / sum(cnt1)
                 top5_acc = sum(sum5) / sum(cnt5)
-                print('Validation: Top1: %.3f | Top5: %.3f' % (top1_acc, top5_acc))
+                print('Validation: Top1: %.3f | Top5: %.3f'%(top1_acc, top5_acc))
             return
 
         if args.gpu == 0:
             top1_acc = sum(sum1) / sum(cnt1)
             top5_acc = sum(sum5) / sum(cnt5)
-            print('Validation: Top1: %.3f | Top5: %.3f' % (top1_acc, top5_acc))
+            print('Validation: Top1: %.3f | Top5: %.3f'%(top1_acc, top5_acc))
 
             # save checkpoint
             acclist_val += [top1_acc]
             if top1_acc > best_pred:
-                best_pred = top1_acc
+                best_pred = top1_acc 
                 is_best = True
             encoding.utils.save_checkpoint({
                 'epoch': epoch,
                 'state_dict': model.module.state_dict(),
                 'optimizer': optimizer.state_dict(),
                 'best_pred': best_pred,
-                'acclist_train': acclist_train,
-                'acclist_val': acclist_val,
-            }, args=args, is_best=is_best)
-
+                'acclist_train':acclist_train,
+                'acclist_val':acclist_val,
+                }, args=args, is_best=is_best)
 
     if args.export:
         if args.gpu == 0:
@@ -348,8 +333,7 @@ def main_worker(gpu, ngpus_per_node, args):
     for epoch in range(args.start_epoch, args.epochs):
         tic = time.time()
         train(epoch)
-        val_per_epoch = 1
-        if epoch % val_per_epoch == 0:  # or epoch == args.epochs-1:
+        if epoch % 1 == 0:# or epoch == args.epochs-1:
             validate(epoch)
         elapsed = time.time() - tic
         if args.gpu == 0:
@@ -357,14 +341,13 @@ def main_worker(gpu, ngpus_per_node, args):
 
     if args.gpu == 0:
         encoding.utils.save_checkpoint({
-            'epoch': args.epochs - 1,
+            'epoch': args.epochs-1,
             'state_dict': model.module.state_dict(),
             'optimizer': optimizer.state_dict(),
             'best_pred': best_pred,
-            'acclist_train': acclist_train,
-            'acclist_val': acclist_val,
-        }, args=args, is_best=False)
-
+            'acclist_train':acclist_train,
+            'acclist_val':acclist_val,
+            }, args=args, is_best=False)
 
 if __name__ == "__main__":
     main()
